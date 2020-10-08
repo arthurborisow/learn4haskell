@@ -737,7 +737,7 @@ value of the element itself
 🕯 HINT: Use combination of 'map' and 'replicate'
 -}
 smartReplicate :: [Int] -> [Int]
-smartReplicate = concat . map (\x -> replicate x x)
+smartReplicate = concatMap (\x -> replicate x x)
 
 {- |
 =⚔️= Task 9
@@ -874,8 +874,11 @@ and reverses it.
   cheating!
 -}
 rewind :: [Int] -> [Int]
-rewind [] = []
-rewind (x:xs) = (rewind xs) ++ [x]
+rewind = go []
+  where
+    go :: [Int] -> [Int] -> [Int]
+    go acc [] = acc
+    go acc (x:xs) = go (x:acc) xs
 
 
 {-
