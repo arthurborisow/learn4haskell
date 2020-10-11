@@ -547,8 +547,7 @@ mid :: Int -> Int -> Int -> Int
 mid x y z
     | ((x >= y) && (x <= z)) || ((x >= z) && (x <= y)) = x
     | ((y >= x) && (y <= z)) || ((y >= z) && (y <= x)) = y
-    | ((z >= y) && (z <= x)) || ((z >= x) && (z <= y)) = z
-    | otherwise = x
+    | otherwise = z
 
 {- |
 =⚔️= Task 8
@@ -632,10 +631,7 @@ specifying complex expressions.
 sumLast2 :: Int -> Int
 sumLast2 n = lastVal + veryLastVal
     where
-      n' = abs n
-      veryLastVal = mod n' 10
-      lastVal = mod (div n' 10) 10
-
+      (lastVal, veryLastVal) = divMod (mod (abs n) 100) 10
 
 {- |
 =💣= Task 10*
