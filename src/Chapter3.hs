@@ -1119,6 +1119,133 @@ Implement data types and typeclasses, describing such a battle between two
 contestants, and write a function that decides the outcome of a fight!
 -}
 
+data KnightAction = AttackAction | PotionAction Health | SpellAction Defense deriving (Show, Eq)
+data MonsterAction = HitAction | RunAction deriving (Show, Eq)
+
+newtype Health = Health { unHealth :: Int } deriving (Show, Eq)
+newtype Attack = Attack { unAttack :: Int } deriving (Show, Eq)
+newtype Defense = Defense { unDefense :: Int } deriving (Show, Eq)
+
+instance Append Health where
+  append (Health h1) (Health h2) = Health (h1 + h2)
+
+instance Append Defense where
+  append (Defense d1) (Defense d2) = Defense (d1 + d2)
+
+newtype IncreaseHealth = IncreaseHealth Health
+newtype IncreaseDefense = IncreaseDefense Defense
+
+data Target = Self | Opponent
+
+data ActionResult a = Alive a | NotAlive deriving (Show, Eq)
+
+class Action a where
+  target :: a -> Target
+
+  buff :: Fighter f => f a -> a -> ActionResult (f a)
+  buff f _ = Alive f
+
+instance Action KnightAction where
+  target AttackAction = Opponent
+  target _ = Self
+
+  buff f (PotionAction h) = Alive (increaseHealth f (IncreaseHealth h))
+  buff f (SpellAction d) = Alive (increaseDefense f (IncreaseDefense d))
+  buff f _ = Alive f
+
+instance Action MonsterAction where
+  target HitAction = Opponent
+  target RunAction = Self
+
+  buff _ RunAction = NotAlive
+  buff f _ = Alive f
+
+data Monster a = Monster
+    { monsterHealth :: Health
+    , monsterAttack :: Attack
+    , monsterActions :: [a]
+    } deriving (Show, Eq)
+
+data Knight a = Knight
+    { knightHealth :: Health
+    , knightAttack :: Attack
+    , knightDefense :: Defense
+    , knightActions :: [a]
+    } deriving (Show, Eq)
+
+class Fighter f where
+  -- ehm, not sure how I did it - just tried different approaches
+  -- since actions :: (Action a) => f -> [a] won't let me create instaces
+  -- I believe the problem is the same https://stackoverflow.com/questions/44243367/rigid-type-variable-in-haskell
+  -- at this point I can take it as a belief since can't explain it
+  -- but now I think I can have as many fighters as I probably can
+  -- the only problem is that I can't restrict e.g. that Knight can only have KnightAction actions
+  actions :: (Action a) => f a -> [a]
+
+  increaseHealth :: f a -> IncreaseHealth -> f a
+  increaseHealth f _ = f
+
+  increaseDefense :: f a -> IncreaseDefense -> f a
+  increaseDefense f _ = f
+
+  getAttack :: f a -> Attack
+  receiveAttack :: f a -> Attack -> ActionResult (f a)
+  alive :: f a -> Bool
+
+instance Fighter Monster where
+  actions = monsterActions
+  receiveAttack m (Attack attack) = if alive afterDamage then Alive afterDamage else NotAlive
+      where
+        health = unHealth . monsterHealth $ m
+        afterDamage = m { monsterHealth = Health (health - attack) }
+  getAttack = monsterAttack
+  alive m = (unHealth . monsterHealth $ m) > 0
+
+instance Fighter Knight where
+  actions = knightActions
+  increaseHealth k (IncreaseHealth h) = k { knightHealth = knightHealth k `append` h }
+  increaseDefense k (IncreaseDefense d) = k { knightDefense = knightDefense k `append` d }
+  receiveAttack k (Attack a) = if alive afterDamage then Alive afterDamage else NotAlive
+      where
+        newAttack = a - (unDefense . knightDefense $ k)
+        health = unHealth . knightHealth $ k
+        newHealth = if newAttack < 0 then health else health - newAttack
+        afterDamage = k { knightHealth = Health newHealth }
+  getAttack = knightAttack
+  alive k = (unHealth . knightHealth $ k) > 0
+
+data FightResult a b = FirstWinner a | SecondWinner b deriving (Show, Eq)
+
+data Turn = First | Second
+
+letsFight :: (Fighter f, Action a, Fighter f', Action a') => f a -> f' a' -> FightResult (f a) (f' a')
+letsFight f f' = go (f, cycle (actions f)) (f', cycle (actions f')) First
+  where
+    -- the initial idea was to have one list of all actions taken from first and second fighter one by one
+    -- but I failed to achieve that unless all the actions are of the same type
+    -- then I wanted to just swap second and first on each iteration but still can't achieve that since
+    -- they are of different types though they have the same type class
+    -- and that's why I have this ugly duplication here and the Turn flag which is not very functional I believe
+    go (first, action:restFirstActions) (second, secondActions) First =
+      case target action of
+          Self -> case buff first action of
+                      Alive fir -> go (fir, restFirstActions) (second, secondActions) Second
+                      _ -> SecondWinner second
+          Opponent -> case receiveAttack second (getAttack first) of
+                          Alive sec -> go (first, restFirstActions) (sec, secondActions) Second
+                          _ -> FirstWinner first
+
+    go (first, firstActions) (second, action:restSecondActions) Second =
+      case target action of
+          Self -> case buff second action of
+                      Alive sec -> go (first, firstActions) (sec, restSecondActions) First
+                      _ -> SecondWinner second
+          Opponent -> case receiveAttack first (getAttack second) of
+                          Alive fir -> go (fir, firstActions) (second, restSecondActions) First
+                          _ -> SecondWinner second
+    go l r t = go l r t -- shouldn't be here since actions are infinite
+
+
 {-
 You did it! Now it is time to open pull request with your changes
 and summon @vrom911 and @chshersh for the review!
