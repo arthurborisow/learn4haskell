@@ -97,8 +97,27 @@ chapter4normal = describe "Chapter4Normal" $ do
         let tree :: Tree Int
             tree = Node (Node (Leaf 4) 2 (Node (Leaf 6) 5 (Leaf 7))) 1 (Node (Node (Leaf 9) 8 (Leaf 10)) 3 (Leaf 11))
         describe "Functor" $ do
+            it "maps a tree which consists of single leaf" $ do
+                fmap (+3) (Leaf 17) `shouldBe` Leaf 20
             it "maps every element in a tree" $ do
                 fmap (*2) tree `shouldBe` Node (Node (Leaf 8) 4 (Node (Leaf 12) 10 (Leaf 14))) 2 (Node (Node (Leaf 18) 16 (Leaf 20)) 6 (Leaf 22))
+        describe "reverseTree" $ do
+            it "leaves a leaf intact" $ do
+                reverseTree (Leaf 3) `shouldBe` Leaf 3
+            it "changes the leafs of the node but leaves value intact" $ do
+                reverseTree (Node (Leaf 1) 2 (Leaf 3)) `shouldBe` Node (Leaf 3) 2 (Leaf 1)
+            it "reverses all the tree recursively" $ do
+                let reversedTree :: Tree Int
+                    reversedTree = Node (Node (Leaf 11) 3 (Node (Leaf 10) 8 (Leaf 9))) 1 (Node (Node (Leaf 7) 5 (Leaf 6)) 2 (Leaf 4))
+
+                reverseTree tree `shouldBe` reversedTree
+        describe "treeToList" $ do
+            it "converts leaf to a singleton list" $ do
+                treeToList (Leaf 98) `shouldBe` Cons 98 Empty
+            it "converts a single node to a three element list" $ do
+                treeToList (Node (Leaf 76) 23 (Leaf 15)) `shouldBe` Cons 23 (Cons 76 (Cons 15 Empty))
+            it "converts tree to the list" $ do
+                treeToList tree `shouldBe` Cons 1 (Cons 2 (Cons 4 (Cons 5 (Cons 6 (Cons 7 (Cons 3 (Cons 8 (Cons 9 (Cons 10 (Cons 11 Empty))))))))))
 
 chapter4advanced :: Spec
 chapter4advanced = describe "Chapter4Advanced" $

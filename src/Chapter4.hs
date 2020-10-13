@@ -713,6 +713,14 @@ instance Functor Tree where
   fmap :: (a -> b) -> Tree a -> Tree b
   fmap f (Leaf a) = Leaf (f a)
   fmap f (Node n a n') = Node (fmap f n) (f a) (fmap f n')
+
+reverseTree :: Tree a -> Tree a
+reverseTree (Leaf a) = Leaf a
+reverseTree (Node l v r) = Node (reverseTree r) v (reverseTree l)
+
+treeToList :: Tree a -> List a
+treeToList (Leaf a) = Cons a Empty
+treeToList (Node l v r) = Cons v (treeToList l) `addLists` treeToList r
 {-
 You did it! Now it is time to open pull request with your changes
 and summon @vrom911 and @chshersh for the review!
