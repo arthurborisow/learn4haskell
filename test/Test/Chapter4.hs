@@ -45,6 +45,49 @@ chapter4normal = describe "Chapter4Normal" $ do
             Reward not <*> Reward True `shouldBe` (Reward False :: Secret String Bool)
         it "reward <*> reward" $
             Reward odd <*> Reward 42 `shouldBe` (Reward False :: Secret String Bool)
+    describe "add two lists" $ do
+        let list = Cons 1 (Cons 2 Empty)
+
+        it "returns first list if second is empty" $ do
+            addLists list Empty `shouldBe` list
+
+        it "returns second list if first one is empty" $ do
+            addLists Empty list `shouldBe` list
+
+        it "returns united list" $ do
+            addLists list list `shouldBe` Cons 1 (Cons 2 (Cons 1 (Cons 2 Empty)))
+
+    describe "flatten list of lists" $ do
+        it "single list lists" $ do
+            concatL (Cons (Cons 1 (Cons 2 Empty)) Empty) `shouldBe` Cons 1 (Cons 2 Empty)
+
+        it "when there are two lists and the first of them is empty" $ do
+            concatL (Cons Empty (Cons (Cons 16 (Cons 42 Empty)) Empty)) `shouldBe` Cons 16 (Cons 42 Empty)
+
+        it "two lists" $ do
+            concatL (Cons (Cons 1 (Cons 2 Empty)) (Cons (Cons 3 (Cons 4 Empty)) Empty)) `shouldBe` Cons 1 (Cons 2 (Cons 3 (Cons 4 Empty)))
+
+        it "arbitrary amount of lists" $ do
+            let list1 :: List Int
+                list1 = Cons 420 (Cons 421 (Cons 422 Empty))
+            let list2 :: List Int
+                list2 = Cons 520 (Cons 521 (Cons 522 (Cons 523 Empty)))
+            let list3 :: List Int
+                list3 = Cons 620 (Cons 621 Empty)
+            let input :: List (List Int)
+                input = Cons list3 (Cons Empty (Cons list2 (Cons Empty (Cons list1 Empty))))
+            let output :: List Int
+                output = Cons 620 (Cons 621 (Cons 520 (Cons 521 (Cons 522 (Cons 523 (Cons 420 (Cons 421 (Cons 422 Empty))))))))
+
+            concatL input `shouldBe` output
+    describe "Task5: Applicative for list" $ do
+        it "produces the multiplication of lists" $ do
+            let fs :: List (Int -> Int)
+                fs = Cons (+ 1) (Cons (+ 2) Empty)
+            let vs :: List Int
+                vs = Cons 5 (Cons 6 (Cons 7 Empty))
+
+            fs <*> vs `shouldBe` Cons 6 (Cons 7 (Cons 7 (Cons 8 (Cons 8 (Cons 9 Empty)))))
     describe "Task6: Monad for Secret" $ do
         it "Trap" $ (Trap "aaar" >>= halfSecret) `shouldBe` Trap "aaar"
         it "Reward even" $ (Reward 42 >>= halfSecret) `shouldBe` Reward 21
