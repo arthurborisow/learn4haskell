@@ -707,7 +707,12 @@ Specifically,
  ❃ Implement the function to convert Tree to list
 -}
 
+data Tree a = Node (Tree a) a (Tree a) | Leaf a deriving (Show, Eq)
 
+instance Functor Tree where
+  fmap :: (a -> b) -> Tree a -> Tree b
+  fmap f (Leaf a) = Leaf (f a)
+  fmap f (Node n a n') = Node (fmap f n) (f a) (fmap f n')
 {-
 You did it! Now it is time to open pull request with your changes
 and summon @vrom911 and @chshersh for the review!

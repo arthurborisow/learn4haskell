@@ -93,6 +93,13 @@ chapter4normal = describe "Chapter4Normal" $ do
         it "Reward even" $ (Reward 42 >>= halfSecret) `shouldBe` Reward 21
         it "Reward odd" $ (Reward 11 >>= halfSecret) `shouldBe` Trap "it's a trap"
 
+    describe "Task 9*" $ do
+        let tree :: Tree Int
+            tree = Node (Node (Leaf 4) 2 (Node (Leaf 6) 5 (Leaf 7))) 1 (Node (Node (Leaf 9) 8 (Leaf 10)) 3 (Leaf 11))
+        describe "Functor" $ do
+            it "maps every element in a tree" $ do
+                fmap (*2) tree `shouldBe` Node (Node (Leaf 8) 4 (Node (Leaf 12) 10 (Leaf 14))) 2 (Node (Node (Leaf 18) 16 (Leaf 20)) 6 (Leaf 22))
+
 chapter4advanced :: Spec
 chapter4advanced = describe "Chapter4Advanced" $
     describe "Task 8*: Before the Final Boss" $ do
