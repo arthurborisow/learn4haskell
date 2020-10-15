@@ -1006,7 +1006,8 @@ instance Append [a] where
 instance Append m => Append (Maybe m) where
   append :: Maybe m -> Maybe m -> Maybe m
   append (Just j1) (Just j2) = Just (append j1 j2)
-  append _ _ = Nothing
+  append x Nothing = x
+  append Nothing x = x
 
 {-
 =🛡= Standard Typeclasses and Deriving
