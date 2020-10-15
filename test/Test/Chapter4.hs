@@ -81,13 +81,18 @@ chapter4normal = describe "Chapter4Normal" $ do
 
             concatL input `shouldBe` output
     describe "Task5: Applicative for list" $ do
-        it "produces the multiplication of lists" $ do
-            let fs :: List (Int -> Int)
-                fs = Cons (+ 1) (Cons (+ 2) Empty)
-            let vs :: List Int
-                vs = Cons 5 (Cons 6 (Cons 7 Empty))
+        let fs :: List (Int -> Int)
+            fs = Cons (+ 1) (Cons (+ 2) Empty)
+        let vs :: List Int
+            vs = Cons 5 (Cons 6 (Cons 7 Empty))
 
+        it "produces the multiplication of lists" $ do
             fs <*> vs `shouldBe` Cons 6 (Cons 7 (Cons 7 (Cons 8 (Cons 8 (Cons 9 Empty)))))
+        it "produces empty list if functions context is empty" $ do
+            (Empty :: List (Int -> Int)) <*> vs `shouldBe` Empty
+
+        it "produces empty list if values context is empty" $ do
+            fs <*> Empty `shouldBe` Empty
     describe "Task6: Monad for Secret" $ do
         it "Trap" $ (Trap "aaar" >>= halfSecret) `shouldBe` Trap "aaar"
         it "Reward even" $ (Reward 42 >>= halfSecret) `shouldBe` Reward 21

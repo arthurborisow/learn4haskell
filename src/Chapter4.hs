@@ -500,8 +500,6 @@ instance Applicative List where
     pure a = Cons a Empty
 
     (<*>) :: List (a -> b) -> List a -> List b
-    Empty <*> _ = Empty
-    _ <*> Empty = Empty
     fs <*> vs = concatL (fmap (\v -> fmap (\f -> f v ) fs ) vs)
 
 
@@ -513,8 +511,7 @@ concatL (Cons x (Cons y y')) = addLists x (addLists y (concatL y'))
 addLists :: List a -> List a -> List a
 addLists l Empty = l
 addLists Empty l = l
-addLists (Cons l Empty) r = Cons l r
-addLists (Cons l (Cons l' l'')) r = Cons l (Cons l' (addLists l'' r))
+addLists (Cons x xs) r = Cons x (addLists xs r)
 
 {- |
 =🛡= Monad
