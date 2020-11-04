@@ -50,8 +50,13 @@ signatures in places where you can't by default. We believe it's helpful to
 provide more top-level type signatures, especially when learning Haskell.
 -}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Chapter3 where
+
+import Data.Kind (Type)
 
 {-
 =🛡= Types in Haskell
@@ -1120,8 +1125,8 @@ Implement data types and typeclasses, describing such a battle between two
 contestants, and write a function that decides the outcome of a fight!
 -}
 
-data KnightAction = AttackAction | PotionAction Health | SpellAction Defense deriving (Show, Eq)
-data MonsterAction = HitAction | RunAction deriving (Show, Eq)
+-- data KnightAction = AttackAction | PotionAction Health | SpellAction Defense deriving (Show, Eq)
+-- data MonsterAction = HitAction | RunAction deriving (Show, Eq)
 
 newtype Health = Health { unHealth :: Int } deriving (Show, Eq)
 newtype Attack = Attack { unAttack :: Int } deriving (Show, Eq)
@@ -1143,10 +1148,10 @@ data ActionResult a = Alive a | NotAlive deriving (Show, Eq)
 class Action a where
   target :: a -> Target
 
-  buff :: Fighter f => f a -> a -> ActionResult (f a)
+  buff :: Fighter f => f -> a -> ActionResult f
   buff f _ = Alive f
 
-instance Action KnightAction where
+instance Action (ActionType Knight) where
   target AttackAction = Opponent
   target _ = Self
 
@@ -1154,47 +1159,45 @@ instance Action KnightAction where
   buff f (SpellAction d) = Alive (increaseDefense f (IncreaseDefense d))
   buff f _ = Alive f
 
-instance Action MonsterAction where
+instance Action (ActionType Monster) where
   target HitAction = Opponent
   target RunAction = Self
 
   buff _ RunAction = NotAlive
   buff f _ = Alive f
 
-data Monster a = Monster
+data Monster = Monster
     { monsterHealth :: Health
     , monsterAttack :: Attack
-    , monsterActions :: [a]
+    , monsterActions :: [ActionType Monster]
     } deriving (Show, Eq)
 
-data Knight a = Knight
+data Knight = Knight
     { knightHealth :: Health
     , knightAttack :: Attack
     , knightDefense :: Defense
-    , knightActions :: [a]
+    , knightActions :: [ActionType Knight]
     } deriving (Show, Eq)
 
-class Fighter f where
-  -- ehm, not sure how I did it - just tried different approaches
-  -- since actions :: (Action a) => f -> [a] won't let me create instaces
-  -- I believe the problem is the same https://stackoverflow.com/questions/44243367/rigid-type-variable-in-haskell
-  -- at this point I can take it as a belief since can't explain it
-  -- but now I think I can have as many fighters as I probably can
-  -- the only problem is that I can't restrict e.g. that Knight can only have KnightAction actions
-  actions :: (Action a) => f a -> [a]
+class (Action (ActionType f)) => Fighter f where
+  data ActionType f :: Type
 
-  increaseHealth :: f a -> IncreaseHealth -> f a
+  actions :: f -> Stream (ActionType f)
+
+  increaseHealth :: f -> IncreaseHealth -> f
   increaseHealth f _ = f
 
-  increaseDefense :: f a -> IncreaseDefense -> f a
+  increaseDefense :: f -> IncreaseDefense -> f
   increaseDefense f _ = f
 
-  getAttack :: f a -> Attack
-  receiveAttack :: f a -> Attack -> ActionResult (f a)
-  alive :: f a -> Bool
+  getAttack :: f -> Attack
+  receiveAttack :: f -> Attack -> ActionResult f
+  alive :: f -> Bool
 
 instance Fighter Monster where
-  actions = monsterActions
+  data ActionType Monster = HitAction | RunAction deriving (Show, Eq)
+
+  actions = listToStream . monsterActions
   receiveAttack m (Attack attack) = if alive afterDamage then Alive afterDamage else NotAlive
       where
         health = unHealth . monsterHealth $ m
@@ -1203,7 +1206,9 @@ instance Fighter Monster where
   alive m = (unHealth . monsterHealth $ m) > 0
 
 instance Fighter Knight where
-  actions = knightActions
+  data ActionType Knight = AttackAction | PotionAction Health | SpellAction Defense deriving (Show, Eq)
+
+  actions = listToStream . knightActions
   increaseHealth k (IncreaseHealth h) = k { knightHealth = knightHealth k `append` h }
   increaseDefense k (IncreaseDefense d) = k { knightDefense = knightDefense k `append` d }
   receiveAttack k (Attack a) = if alive afterDamage then Alive afterDamage else NotAlive
@@ -1226,8 +1231,8 @@ listToStream l = go $ cycle l
   where go :: [a] -> Stream a
         go xs = Stream (head xs) (go (tail xs))
 
-letsFight :: (Fighter f, Action a, Fighter f', Action a') => f a -> f' a' -> FightResult (f a) (f' a')
-letsFight f f' = go (f, listToStream (actions f)) (f', listToStream (actions f')) First
+letsFight :: (Fighter f, Fighter f') => f -> f'-> FightResult f f'
+letsFight f f' = go (f, actions f) (f', actions f') First
   where
     -- the initial idea was to have one list of all actions taken from first and second fighter one by one
     -- but I failed to achieve that unless all the actions are of the same type
