@@ -53,6 +53,8 @@ provide more top-level type signatures, especially when learning Haskell.
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Chapter3 where
 
@@ -1125,9 +1127,6 @@ Implement data types and typeclasses, describing such a battle between two
 contestants, and write a function that decides the outcome of a fight!
 -}
 
--- data KnightAction = AttackAction | PotionAction Health | SpellAction Defense deriving (Show, Eq)
--- data MonsterAction = HitAction | RunAction deriving (Show, Eq)
-
 newtype Health = Health { unHealth :: Int } deriving (Show, Eq)
 newtype Attack = Attack { unAttack :: Int } deriving (Show, Eq)
 newtype Defense = Defense { unDefense :: Int } deriving (Show, Eq)
@@ -1182,7 +1181,8 @@ data Knight = Knight
 class (Action (ActionType f)) => Fighter f where
   data ActionType f :: Type
 
-  actions :: f -> Stream (ActionType f)
+  actions :: f -> [ActionType f]
+  withNewActions :: f -> [ActionType f] -> f
 
   increaseHealth :: f -> IncreaseHealth -> f
   increaseHealth f _ = f
@@ -1197,7 +1197,8 @@ class (Action (ActionType f)) => Fighter f where
 instance Fighter Monster where
   data ActionType Monster = HitAction | RunAction deriving (Show, Eq)
 
-  actions = listToStream . monsterActions
+  actions = monsterActions
+  withNewActions m a = m { monsterActions = a }
   receiveAttack m (Attack attack) = if alive afterDamage then Alive afterDamage else NotAlive
       where
         health = unHealth . monsterHealth $ m
@@ -1208,7 +1209,8 @@ instance Fighter Monster where
 instance Fighter Knight where
   data ActionType Knight = AttackAction | PotionAction Health | SpellAction Defense deriving (Show, Eq)
 
-  actions = listToStream . knightActions
+  actions = knightActions
+  withNewActions m a = m { knightActions = a }
   increaseHealth k (IncreaseHealth h) = k { knightHealth = knightHealth k `append` h }
   increaseDefense k (IncreaseDefense d) = k { knightDefense = knightDefense k `append` d }
   receiveAttack k (Attack a) = if alive afterDamage then Alive afterDamage else NotAlive
@@ -1220,42 +1222,32 @@ instance Fighter Knight where
   getAttack = knightAttack
   alive k = (unHealth . knightHealth $ k) > 0
 
-data FightResult a b = FirstWinner a | SecondWinner b deriving (Show, Eq)
+-- the way to generalize fighters to eliminate duplication in `battle` function
+data Battler = forall b. (Fighter b, Show b) => Battler b
 
-data Turn = First | Second
+deriving instance Show Battler
+-- dirty hack but the best I can come up with
+-- the other way is to use Typable but that's too much writing
+instance Eq Battler where
+  Battler x == Battler y = show x == show y
 
-data Stream a = Stream a (Stream a)
-
-listToStream :: [a] -> Stream a
-listToStream l = go $ cycle l
-  where go :: [a] -> Stream a
-        go xs = Stream (head xs) (go (tail xs))
-
-letsFight :: (Fighter f, Fighter f') => f -> f'-> FightResult f f'
-letsFight f f' = go (f, actions f) (f', actions f') First
+battle :: Battler -> Battler -> Battler
+battle = go
   where
-    -- the initial idea was to have one list of all actions taken from first and second fighter one by one
-    -- but I failed to achieve that unless all the actions are of the same type
-    -- then I wanted to just swap second and first on each iteration but still can't achieve that since
-    -- they are of different types though they have the same type class
-    -- and that's why I have this ugly duplication here and the Turn flag which is not very functional I believe
-    go (first, Stream action restFirstActions) (second, secondActions) First =
+    go b1@(Battler first) b2@(Battler second) =
       case target action of
-          Self -> case buff first action of
-                      Alive fir -> go (fir, restFirstActions) (second, secondActions) Second
-                      _ -> SecondWinner second
-          Opponent -> case receiveAttack second (getAttack first) of
-                          Alive sec -> go (first, restFirstActions) (sec, secondActions) Second
-                          _ -> FirstWinner first
-
-    go (first, firstActions) (second, Stream action restSecondActions) Second =
-      case target action of
-          Self -> case buff second action of
-                      Alive sec -> go (first, firstActions) (sec, restSecondActions) First
-                      _ -> SecondWinner second
-          Opponent -> case receiveAttack first (getAttack second) of
-                          Alive fir -> go (fir, firstActions) (second, restSecondActions) First
-                          _ -> SecondWinner second
+          Self ->
+            case buff first action of
+              Alive fir -> go b2 (Battler (withNewActions fir newActions) )
+              _ -> b2
+          Opponent ->
+            case receiveAttack second (getAttack first) of
+              Alive sec -> go (Battler sec) (Battler (withNewActions first newActions))
+              _ -> b1
+      where
+        acts = actions first
+        action = head acts
+        newActions = take (length acts) $ drop 1 $ cycle acts
 
 {-
 You did it! Now it is time to open pull request with your changes

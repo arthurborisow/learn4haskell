@@ -35,31 +35,31 @@ chapter3 = describe "Chapter3" $ do
                     buff fighter (PotionAction (Health 13)) `shouldBe` Alive (fighter { knightHealth = knightHealth fighter `append` Health 13 })
 
             specify "the first fighter who hits with more damage than opponent's health wins" $ do
-                let fighter1 = Knight (Health 200) (Attack 300) (Defense 200) [AttackAction]
-                let fighter2 = Knight (Health 100) (Attack 300) (Defense 0) [AttackAction]
+                let fighter1 = Battler $ Knight (Health 200) (Attack 300) (Defense 200) [AttackAction]
+                let fighter2 = Battler $ Knight (Health 100) (Attack 300) (Defense 0) [AttackAction]
 
-                letsFight fighter1 fighter2 `shouldBe` FirstWinner fighter1
+                battle fighter1 fighter2 `shouldBe` fighter1
 
             specify "when first can't kill with one hit but second can the second is a winner" $ do
-                let fighter1 = Knight (Health 200) (Attack 10) (Defense 0) [AttackAction]
-                let fighter2 = Knight (Health 100) (Attack 300) (Defense 300) [AttackAction]
+                let fighter1 = Battler $ Knight (Health 200) (Attack 10) (Defense 0) [AttackAction]
+                let fighter2 = Battler $ Knight (Health 100) (Attack 300) (Defense 300) [AttackAction]
 
-                letsFight fighter1 fighter2 `shouldBe` SecondWinner fighter2
+                battle fighter1 fighter2 `shouldBe` fighter2
 
             specify "fighters of different types" $ do
-                let fighter1 = Knight (Health 200) (Attack 300) (Defense 200) [AttackAction]
-                let fighter2 = Monster (Health 100) (Attack 300) [HitAction]
+                let fighter1 = Battler $ Knight (Health 200) (Attack 300) (Defense 200) [AttackAction]
+                let fighter2 = Battler $ Monster (Health 100) (Attack 300) [HitAction]
 
-                letsFight fighter1 fighter2 `shouldBe` FirstWinner fighter1
+                battle fighter1 fighter2 `shouldBe` fighter1
 
             specify "when second has to win but first drinks health potion all the time" $ do
-                let fighter1 = Knight (Health 100) (Attack 10) (Defense 0) [AttackAction, PotionAction (Health 50)]
-                let fighter2 = Monster (Health 100) (Attack 25) [HitAction]
+                let fighter1 = Battler $ Knight (Health 100) (Attack 10) (Defense 0) [AttackAction, PotionAction (Health 50)]
+                let fighter2 = Battler $ Monster (Health 100) (Attack 25) [HitAction]
 
-                letsFight fighter1 fighter2 `shouldBe` FirstWinner fighter1
+                battle fighter1 fighter2 `shouldBe` fighter1
 
             specify "monsters can run away" $ do
-                let fighter1 = Monster (Health 100) (Attack 100) [HitAction, HitAction, HitAction, HitAction, RunAction]
+                let fighter1 = Battler $ Monster (Health 100) (Attack 100) [HitAction, HitAction, HitAction, HitAction, RunAction]
                 let fighter2 = Knight (Health 100) (Attack 10) (Defense 80) [AttackAction]
 
-                letsFight fighter1 fighter2 `shouldBe` SecondWinner (fighter2 { knightHealth = Health 20 })
+                battle fighter1 (Battler fighter2) `shouldBe` (Battler $ fighter2 { knightHealth = Health 20 })
