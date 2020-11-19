@@ -1131,11 +1131,11 @@ newtype Health = Health { unHealth :: Int } deriving (Show, Eq)
 newtype Attack = Attack { unAttack :: Int } deriving (Show, Eq)
 newtype Defense = Defense { unDefense :: Int } deriving (Show, Eq)
 
-instance Append Health where
-  append (Health h1) (Health h2) = Health (h1 + h2)
+instance Semigroup Health where
+  (Health h1) <> (Health h2) = Health (h1 + h2)
 
-instance Append Defense where
-  append (Defense d1) (Defense d2) = Defense (d1 + d2)
+instance Semigroup Defense where
+  (Defense d1) <> (Defense d2) = Defense (d1 + d2)
 
 newtype IncreaseHealth = IncreaseHealth Health
 newtype IncreaseDefense = IncreaseDefense Defense
@@ -1217,8 +1217,8 @@ instance Fighter Knight where
 
   actions = knightActions
   withNewActions m a = m { knightActions = a }
-  increaseHealth k (IncreaseHealth h) = k { knightHealth = knightHealth k `append` h }
-  increaseDefense k (IncreaseDefense d) = k { knightDefense = knightDefense k `append` d }
+  increaseHealth k (IncreaseHealth h) = k { knightHealth = knightHealth k <> h }
+  increaseDefense k (IncreaseDefense d) = k { knightDefense = knightDefense k <> d }
   receiveAttack k (Attack a) = if alive afterDamage then Alive afterDamage else NotAlive
       where
         newAttack = a - (unDefense . knightDefense $ k)

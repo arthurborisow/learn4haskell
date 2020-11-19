@@ -32,7 +32,7 @@ chapter3 = describe "Chapter3" $ do
                 specify "can increase health" $ do
                     let fighter = Knight (Health 100) (Attack 300) (Defense 200) []
 
-                    buff fighter (PotionAction (Health 13)) `shouldBe` Alive (fighter { knightHealth = knightHealth fighter `append` Health 13 })
+                    buff fighter (PotionAction (Health 13)) `shouldBe` Alive (fighter { knightHealth = knightHealth fighter <> Health 13 })
 
             specify "the first fighter who hits with more damage than opponent's health wins" $ do
                 let fighter1 = Battler $ Knight (Health 200) (Attack 300) (Defense 200) [AttackAction]
