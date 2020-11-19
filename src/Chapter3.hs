@@ -1183,6 +1183,12 @@ class (Action (ActionType f)) => Fighter f where
 
   actions :: f -> [ActionType f]
   withNewActions :: f -> [ActionType f] -> f
+  nextAction :: f -> (ActionType f, f)
+  nextAction f = (action, withNewActions f newActions)
+    where
+      acts = actions f
+      action = head acts
+      newActions = take (length acts) $ drop 1 $ cycle acts
 
   increaseHealth :: f -> IncreaseHealth -> f
   increaseHealth f _ = f
@@ -1237,17 +1243,15 @@ battle = go
     go b1@(Battler first) b2@(Battler second) =
       case target action of
           Self ->
-            case buff first action of
-              Alive fir -> go b2 (Battler (withNewActions fir newActions) )
+            case buff f action of
+              Alive fir -> go b2 (Battler fir)
               _ -> b2
           Opponent ->
             case receiveAttack second (getAttack first) of
-              Alive sec -> go (Battler sec) (Battler (withNewActions first newActions))
+              Alive sec -> go (Battler sec) (Battler f)
               _ -> b1
       where
-        acts = actions first
-        action = head acts
-        newActions = take (length acts) $ drop 1 $ cycle acts
+        (action, f) = nextAction first
 
 {-
 You did it! Now it is time to open pull request with your changes
